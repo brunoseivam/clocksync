@@ -140,6 +140,12 @@ int main(int argc, char **argv)
 
    for(;;)
    {
+      struct timeval curtime;
+      gettimeofday(&curtime, NULL);
+
+      printf("TIME: %10d sec\n     %10d usec\n", curtime.tv_sec, curtime.tv_usec);
+
+
       recv_msg(&pkt, &tval);
 
 		command = pkt.type;

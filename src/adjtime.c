@@ -68,7 +68,7 @@ int adjust_master_calcandsend(void)
 	/* Sum all differences */
 	timerclear(&sum);
 
-	for(p = time_list.list; p != NULL; p = p->next)	// Head of list
+	for(p = time_list.list->next; p != NULL; p = p->next)	// Head of list
 	{
 		struct timeval newsum;
 		timeradd(&sum, &p->data.time, &newsum);
@@ -77,12 +77,13 @@ int adjust_master_calcandsend(void)
 		sum.tv_usec = newsum.tv_usec;
 	}
 
+
 	/* Mean of the diferences (include master (+1)) */
 	sum.tv_sec /= time_list.list_op->list_num_elem(&time_list) + 1;
 	sum.tv_usec /= time_list.list_op->list_num_elem(&time_list) + 1;
 
 	/* Adjust slave clocks */
-	for(p = time_list.list; p != NULL; p = p->next)
+	for(p = time_list.list->next; p != NULL; p = p->next)
 	{
 		struct packet pkt;
 
