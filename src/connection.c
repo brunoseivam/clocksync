@@ -15,12 +15,12 @@
 #define PORT "3700"
 
 static int sockfd;
-static struct addrinfo *own_addr;
+//static struct addrinfo *own_addr;
 void print_packet(struct packet *pkt){
 	printf("packet: type: %2X\n", pkt->type);
 	printf("packet: version: %2X\n", pkt->version);
 	printf("packet: seqnum: %d\n", pkt->seqnum);
-	printf("packet: time: %us %us\n", pkt->time.tv_sec, pkt->time.tv_usec);
+	printf("packet: time: %us %us\n", (unsigned int) pkt->time.tv_sec, (unsigned int) pkt->time.tv_usec);
 	printf("packet: ip: %.4s\n", pkt->ip);
 }
 
@@ -28,7 +28,7 @@ void print_msg(char *src_addr, struct packet *pkt, struct timeval *tval){
 	printf("src addr: %d.%d.%d.%d\n", (unsigned char)src_addr[0], (unsigned char)src_addr[1],
 		(unsigned char)src_addr[2], (unsigned char)src_addr[3]);
 	print_packet(pkt);
-	printf("timeleft: %ds %dus\n", tval->tv_sec, tval->tv_usec);
+	printf("timeleft: %ds %dus\n", (int) tval->tv_sec, (int) tval->tv_usec);
 }
 
 void *get_in_addr(struct sockaddr *sa){
@@ -100,9 +100,9 @@ int open_udp_socket(){
 int send_msg(const char *dest_addr, const struct packet *pkt){
 	struct addrinfo hints, *servinfo;
 	int rv, numbytes;
-	char buf[BUFLEN];
+	unsigned char buf[BUFLEN];
 	int bufsize;
-	uint32_t *timevalp;
+	//uint32_t *timevalp;
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC; //AF_INET;
@@ -125,7 +125,7 @@ int send_msg(const char *dest_addr, const struct packet *pkt){
 			(int8_t)pkt->ip[1], (int8_t)pkt->ip[2], (int8_t)pkt->ip[3]);
 
 		/* Send UDP packet */
-		if((numbytes = sendto(sockfd, buf, PACKETSIZE, 0,
+		if((numbytes = sendto(sockfd, buf, bufsize, 0,
 						servinfo->ai_addr, servinfo->ai_addrlen)) == -1){
 			perror("sendto");
 			return -1;
@@ -138,7 +138,7 @@ int recv_msg(char *src_addr, struct packet *pkt, struct timeval *tv){
 	socklen_t their_addr_len;
 	struct sockaddr_storage their_addr;
 	int numbytes;
-	char buf[BUFLEN];
+	unsigned char buf[BUFLEN];
 	fd_set readfds;
 
 	FD_ZERO(&readfds);
@@ -168,4 +168,5 @@ int recv_msg(char *src_addr, struct packet *pkt, struct timeval *tv){
 		/* Get sorce ip. Working only for IPv4 for now */
 		*((int *)src_addr) = *((int *)get_in_addr((struct sockaddr *)&their_addr));
 	}
+	return 0;
 }

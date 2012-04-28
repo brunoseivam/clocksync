@@ -73,8 +73,10 @@ unsigned int unpacki32(unsigned char *buf)
 unsigned long unpacki64(unsigned char *buf)
 {
 #ifdef x86_64
-	return (buf[0]<<56) | (buf[1]<<48) | (buf[2]<<40) | (buf[3]<<32) |
-			(buf[4]<<24) | (buf[5]<<16) | (buf[6]<<8) | buf[7];
+	return ((unsigned long) buf[0] << 56) | ((unsigned long) buf[1] << 48) |
+		    ((unsigned long) buf[2] << 40) | ((unsigned long) buf[3] << 32) |
+			 ((unsigned long) buf[4] << 24) | ((unsigned long) buf[5] << 16) |
+			 ((unsigned long) buf[6] << 8 ) | buf[7];
 #else /*x86_32*/
 	/* Discard the most significant part. Note the big-endianess */
 	return (buf[0]<<24) | (buf[5]<<16) | (buf[6]<<8) | buf[7];
@@ -154,7 +156,7 @@ void unpack(unsigned char *buf, char *format, ...)
 	va_list ap;
 	int16_t *h;
 	int32_t *l;
-	int32_t pf;
+	//int32_t pf;
 	int64_t *z;
 	int8_t *c;
 	char *s;

@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 			pkt.version = 0xBB;
 			pkt.seqnum = count;
 			gettimeofday(&pkt.time, NULL);
-			strcpy(pkt.ip, "ipip");
+			strncpy((char*) pkt.ip, "ipip", 4);
 			printf("-------------------------\n");
 			print_packet(&pkt);
 			printf("-------------------------\n");

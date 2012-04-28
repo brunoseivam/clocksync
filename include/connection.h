@@ -19,4 +19,6 @@ int open_udp_socket(void);
 int send_msg(const char *dest_addr, const struct packet *pkt);
 int recv_msg(char *src_addr, struct packet *pkt, struct timeval *tv);
 
+void print_packet(struct packet *pkt);
+void print_msg(char* src_addr, struct packet *pkt, struct timeval *tval);
 #endif
