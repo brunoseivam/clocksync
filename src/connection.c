@@ -141,6 +141,7 @@ int send_msg(const unsigned char dest_addr_ip[4], const struct packet *pkt){
 												 (unsigned int) dest_addr_ip[2],
 												 (unsigned int) dest_addr_ip[3]);
 
+	printf("------------------\n");
 	printf("SEND TO %s\n", dest_addr);
 
 	memset(&hints, 0, sizeof hints);

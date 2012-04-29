@@ -85,6 +85,8 @@ int main(int argc, char **argv)
 	/* Startup: */
 	build_packet(&pkt, CMD_MASTERREQ, 0); /* Prepare message     */
 	send_msg(BROADCAST, &pkt);			     /* Search for a master */
+	print_packet(&pkt);
+	printf("------------------\n");
    state = STATE_STARTUP;					  /* Set STARTUP state   */
 	set_timer(&tval, STARTUP_TIMEOUT);	  /* Set timeout         */
 	printf("STATE: STARTUP\n");
@@ -95,9 +97,10 @@ int main(int argc, char **argv)
 
 		command = pkt.type;
 
+		printf("------------------\n");
 		printf("got packet:\n");
 		print_packet(&pkt);
-
+		printf("------------------\n");
 
       switch(state | command)
       {
