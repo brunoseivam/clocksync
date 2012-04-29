@@ -11,17 +11,48 @@
 
 #include "connection.h"
 #include "pack.h"
+#include "common.h"
 
 #define PORT "3700"
 
 static int sockfd;
 //static struct addrinfo *own_addr;
+
+const char* cmd_str(enum command cmd)
+{
+	switch(cmd)
+	{
+		case CMD_MASTERREQ:
+			return "MASTER REQUEST";
+		case CMD_MASTERACK:
+			return "MASTER ACKNOWLEDGE";
+		case CMD_ELECTION:
+			return "ELECTION";
+		case CMD_MASTERUP:
+			return "MASTER UP";
+		case CMD_SLAVEUP:
+			return "SLAVE UP";
+		case CMD_ACCEPT:
+			return "ACCEPT CANDIDATURE";
+		case CMD_REFUSE:
+			return "REFUSE CANDIDATURE";
+		case CMD_QUIT:
+			return "QUIT";
+		case CMD_TIMEOUT:
+			return "TIMED OUT WAITING COMMAND";
+		case CMD_ACK:
+			return "ACK";
+	}
+	return "UNKNOWN COMMAND";
+
+}
+
 void print_packet(struct packet *pkt){
-	printf("packet: type: %2X\n", pkt->type);
-	printf("packet: version: %2X\n", pkt->version);
+	printf("packet: type: %2X %s\n", pkt->type, cmd_str(pkt->type));
+/*	printf("packet: version: %2X\n", pkt->version);
 	printf("packet: seqnum: %d\n", pkt->seqnum);
 	printf("packet: time: %us %us\n", (unsigned int) pkt->time.tv_sec, (unsigned int) pkt->time.tv_usec);
-	printf("packet: ip: %.4s\n", pkt->ip);
+	printf("packet: ip: %.4s\n", pkt->ip);*/
 }
 
 void print_msg(char *src_addr, struct packet *pkt, struct timeval *tval){
@@ -97,12 +128,20 @@ int open_udp_socket(){
 	return 0;
 }
 
-int send_msg(const char *dest_addr, const struct packet *pkt){
+int send_msg(const unsigned char dest_addr_ip[4], const struct packet *pkt){
 	struct addrinfo hints, *servinfo;
 	int rv, numbytes;
 	unsigned char buf[BUFLEN];
-	int bufsize;
 	//uint32_t *timevalp;
+
+	char dest_addr[16];  // xxx.xxx.xxx.xxx\0
+
+	sprintf(dest_addr, "%d.%d.%d.%d", (unsigned int) dest_addr_ip[0],
+			                            (unsigned int) dest_addr_ip[1],
+												 (unsigned int) dest_addr_ip[2],
+												 (unsigned int) dest_addr_ip[3]);
+
+	printf("SEND TO %s\n", dest_addr);
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC; //AF_INET;
@@ -120,7 +159,7 @@ int send_msg(const char *dest_addr, const struct packet *pkt){
 
 	/* Serialize structure */
 	/* FIXME Only works for the same endianess. timeval structure */
-	bufsize = pack(buf, "cchzzcccc", (int8_t)pkt->type, (int8_t)pkt->version, (int16_t)pkt->seqnum,
+	pack(buf, "cchzzcccc", (int8_t)pkt->type, (int8_t)pkt->version, (int16_t)pkt->seqnum,
 			(int64_t)pkt->time.tv_sec, (int64_t)pkt->time.tv_usec, (int8_t)pkt->ip[0],
 			(int8_t)pkt->ip[1], (int8_t)pkt->ip[2], (int8_t)pkt->ip[3]);
 
@@ -134,7 +173,7 @@ int send_msg(const char *dest_addr, const struct packet *pkt){
 	return numbytes;
 }
 
-int recv_msg(char *src_addr, struct packet *pkt, struct timeval *tv){
+int recv_msg(struct packet *pkt, struct timeval *tv){
 	socklen_t their_addr_len;
 	struct sockaddr_storage their_addr;
 	int numbytes;
@@ -148,7 +187,7 @@ int recv_msg(char *src_addr, struct packet *pkt, struct timeval *tv){
 
 	/* Timeout expired */
 	if(!FD_ISSET(sockfd, &readfds)){
-		printf("Timeout received!\n");
+		pkt->type = CMD_TIMEOUT;
 	}
 	else{ /* Received message */
 		their_addr_len = sizeof(their_addr);
@@ -166,7 +205,7 @@ int recv_msg(char *src_addr, struct packet *pkt, struct timeval *tv){
 				&pkt->ip[2], &pkt->ip[3]);
 
 		/* Get sorce ip. Working only for IPv4 for now */
-		*((int *)src_addr) = *((int *)get_in_addr((struct sockaddr *)&their_addr));
+		*((int *)pkt->ip) = *((int *)get_in_addr((struct sockaddr *)&their_addr));
 	}
 	return 0;
 }

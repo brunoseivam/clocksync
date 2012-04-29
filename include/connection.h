@@ -16,8 +16,8 @@ struct packet{
 
 /* Open UDP broadcast socket */
 int open_udp_socket(void);
-int send_msg(const char *dest_addr, const struct packet *pkt);
-int recv_msg(char *src_addr, struct packet *pkt, struct timeval *tv);
+int send_msg(const unsigned char dest_addr_ip[4], const struct packet *pkt);
+int recv_msg(struct packet *pkt, struct timeval *tv);
 
 void print_packet(struct packet *pkt);
 void print_msg(char* src_addr, struct packet *pkt, struct timeval *tval);

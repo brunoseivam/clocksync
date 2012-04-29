@@ -6,35 +6,21 @@
 #include <string.h>
 
 #include "connection.h"
+#include "common.h"
 
 #define PORT "3700"
 
 enum state
 {
-   STATE_STARTUP = 32,
-   STATE_SLAVE,
-   STATE_CANDIDATE,
-   STATE_ACCEPT,
-   STATE_MASTER
-};
-
-enum command
-{
-   CMD_TIMEOUT,
-   CMD_ACK,
-   CMD_MASTERREQ,
-   CMD_MASTERACK,
-   CMD_MASTERUP,
-   CMD_SLAVEUP,
-   CMD_ELECTION,
-   CMD_ACCEPT,
-   CMD_REFUSE
+   STATE_STARTUP		= 1 << 5,
+   STATE_SLAVE			= 2 << 5,
+   STATE_CANDIDATE	= 3 << 5,
+   STATE_ACCEPT		= 4 << 5,
+   STATE_MASTER		= 5 << 5
 };
 
 
-unsigned char state, command;
-char			  own_ip[4];
-
+const unsigned char BROADCAST[4] = {255,255,255,255};
 const struct timeval STARTUP_TIMEOUT =
 {
 	.tv_sec = 5,
@@ -78,7 +64,6 @@ void build_packet(struct packet *pkt, unsigned char cmd, int put_time)
 		pkt->time.tv_sec = 0;
 		pkt->time.tv_usec = 0;
 	}
-
 }
 
 void set_timer(struct timeval* tval, struct timeval timeout)
@@ -90,74 +75,150 @@ void set_timer(struct timeval* tval, struct timeval timeout)
 
 int main(int argc, char **argv)
 {
+	unsigned char	command, state;
    struct timeval	tval;
-	int				timeout = 0;
 	struct packet	pkt;
 
 	/* Open a socket and start listening to a scpefied port */
 	open_udp_socket();
 
 	/* Startup: */
-   state = STATE_STARTUP;					/* Set STARTUP state   */
-	send(CMD_MASTERREQ);						/* Search for a master */
-	set_timer(&tval, STARTUP_TIMEOUT);	/* Set timeout         */
+	build_packet(&pkt, CMD_MASTERREQ, 0); /* Prepare message     */
+	send_msg(BROADCAST, &pkt);			     /* Search for a master */
+   state = STATE_STARTUP;					  /* Set STARTUP state   */
+	set_timer(&tval, STARTUP_TIMEOUT);	  /* Set timeout         */
+	printf("STATE: STARTUP\n");
 
    for(;;)
    {
-      command = recv(command);
+      recv_msg(&pkt, &tval);
+
+		command = pkt.type;
+
+		printf("got packet:\n");
+		print_packet(&pkt);
+
 
       switch(state | command)
       {
+			/*    STARTUP    */
          case(STATE_STARTUP | CMD_TIMEOUT):
-            send(CMD_MASTERUP);
+				build_packet(&pkt, CMD_MASTERUP, 0);
+            send_msg(BROADCAST, &pkt);
             state = STATE_MASTER;
+				printf("STATE: MASTER\n");
+				set_timer(&tval, MASTER_TIMEOUT);	  /* Set timeout         */
             break;
 
-         /*case(STATE_SLAVE | CMD_TIMEOUT):
-            send(CMD_ELECTION);
-            // set candidate timer
-            state = STATE_CANDIDATE;
+			case(STATE_STARTUP | CMD_MASTERUP):
+				build_packet(&pkt, CMD_SLAVEUP, 0);
+				send_msg(pkt.ip, &pkt);
+				// no break;
+			case(STATE_STARTUP | CMD_MASTERREQ):
+			case(STATE_STARTUP | CMD_MASTERACK):
+			case(STATE_STARTUP | CMD_ELECTION):
+				state = STATE_SLAVE;
+				printf("STATE: SLAVE\n");
+				set_timer(&tval, SLAVE_TIMEOUT);
+				break;
+
+			/*    MASTER    */
+			case(STATE_MASTER | CMD_TIMEOUT):
+				set_timer(&tval, MASTER_TIMEOUT);
+				// ADJUST TIMES
+				break;
+
+			case(STATE_MASTER | CMD_MASTERREQ):
+				build_packet(&pkt, CMD_MASTERACK, 0);
+				send_msg(pkt.ip, &pkt);
+				break;
+
+			case(STATE_MASTER | CMD_QUIT):
+				build_packet(&pkt, CMD_ACK, 0);
+				send_msg(pkt.ip, &pkt);
+				state = STATE_SLAVE;
+				printf("STATE_SLAVE\n");
+				set_timer(&tval, SLAVE_TIMEOUT);
+				break;
+
+			case(STATE_MASTER | CMD_ELECTION):
+			case(STATE_MASTER | CMD_MASTERUP):
+				build_packet(&pkt, CMD_QUIT, 0);
+				send_msg(pkt.ip, &pkt);
+				break;
+
+
+
+         /*    SLAVE    */
+			case(STATE_SLAVE | CMD_TIMEOUT):
+				build_packet(&pkt, CMD_ELECTION, 0);
+				send_msg(BROADCAST, &pkt);
+				state = STATE_CANDIDATE;
+				printf("STATE_CANDIDATE\n");
+				set_timer(&tval, CANDIDATE_TIMEOUT);
             break;
 
-         case(STATE_SLAVE | CMD_ADJTIME):
-            adjust_time();
-            break;
+			case(STATE_SLAVE | CMD_MASTERUP):
+				build_packet(&pkt, CMD_SLAVEUP, 0);
+				send_msg(BROADCAST, &pkt);
+				break;
 
-         case (STATE_STARTUP | CMD_MASTERUP):
-            send(SLAVE_UP);
+			case(STATE_SLAVE | CMD_ELECTION):
+				build_packet(&pkt, CMD_ACCEPT, 0);
+				send_msg(pkt.ip, &pkt);
+				state = STATE_ACCEPT;
+				printf("STATE_ACCEPT\n");
+				set_timer(&tval, ACCEPT_TIMEOUT);
+				break;
 
-         case (STATE_STARTUP | CMD_MASTERACK):
-         case (STATE_STARTUP | CMD_MASTERREQ):
-         case (STATE_STARTUP | CMD_ELECTION):
+			/*    CANDIDATE   */
+			case(STATE_CANDIDATE | CMD_TIMEOUT):
+				build_packet(&pkt, CMD_MASTERUP, 0);
+				send_msg(BROADCAST, &pkt);
+				state = STATE_MASTER;
+				printf("STATE_MASTER\n");
+				set_timer(&tval, MASTER_TIMEOUT);
+				break;
 
-            state = STATE_SLAVE;
-            break;
+			case(STATE_CANDIDATE | CMD_ELECTION):
+				build_packet(&pkt, CMD_REFUSE, 0);
+				send_msg(pkt.ip, &pkt);
+				break;
 
-         case (STATE_SLAVE | CMD_ELECTION):
+			case(STATE_CANDIDATE | CMD_ACCEPT):
+				build_packet(&pkt, CMD_ACK, 0);
+				send_msg(pkt.ip, &pkt);
+				break;
 
-            send(CMD_ACCEPT);
-            // set accept timer
-            state = STATE_ACCEPT;
-            break;
+			case(STATE_CANDIDATE | CMD_QUIT):
+			case(STATE_CANDIDATE | CMD_REFUSE):
+				build_packet(&pkt, CMD_ACK, 0);
+				send_msg(pkt.ip, &pkt);
+				//no break
 
-         case (STATE_ACCEPT | CMD_TIMEOUT):
-            //set candidate timer
-            state = STATE_SLAVE;
-            break;
+			case(STATE_CANDIDATE | CMD_MASTERREQ):
+				state = STATE_SLAVE;
+				printf("STATE_SLAVE\n");
+				set_timer(&tval, SLAVE_TIMEOUT);
+				break;
 
-         case (STATE_ACCEPT | CMD_ELECTION):
-            send(CMD_REFUSE);
-            break;
+			/*    ACCEPT    */
+			case(STATE_ACCEPT | CMD_TIMEOUT):
+				state = STATE_SLAVE;
+				printf("STATE_SLAVE\n");
+				set_timer(&tval, SLAVE_TIMEOUT);
+				break;
 
-         case (STATE_CANDIDATE | CMD_TIMEOUT):
-            send(CMD_MASTERUP);
-            state = STATE_MASTER;
-            break;
+			case(STATE_ACCEPT | CMD_ELECTION):
+				build_packet(&pkt, CMD_REFUSE, 0);
+				send_msg(pkt.ip, &pkt);
+				break;
 
-         case (STATE_MASTER | CMD_TIMEOUT):
-            collect_clocks();
-            send_adjtimes();
-            break;*/
+			case(STATE_ACCEPT | CMD_MASTERUP):
+				build_packet(&pkt, CMD_SLAVEUP, 0);
+				send_msg(pkt.ip, &pkt);
+				break;
+
       }
    }
 
@@ -198,7 +259,7 @@ int main(int argc, char **argv)
 			sleep(1);
 		}
 	}
-	/* Server *
+	* Server *
 	else{
 		char src_addr[4];
 		while(1){
@@ -211,7 +272,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-   /*tval.it_interval.tv_sec = 5;
+   *tval.it_interval.tv_sec = 5;
    tval.it_interval.tv_usec = 0;
 
    tval.it_value.tv_sec = 5;

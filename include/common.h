@@ -1,0 +1,18 @@
+#ifndef COMMON_H
+#define COMMON_H
+
+enum command
+{
+	CMD_TIMEOUT,
+	CMD_ACK,
+	CMD_MASTERREQ,
+	CMD_MASTERACK,
+	CMD_MASTERUP,
+	CMD_SLAVEUP,
+	CMD_ELECTION,
+	CMD_ACCEPT,
+	CMD_REFUSE,
+	CMD_QUIT
+};
+
+#endif
