@@ -79,7 +79,7 @@ unsigned long unpacki64(unsigned char *buf)
 			 ((unsigned long) buf[6] << 8 ) | buf[7];
 #else /*x86_32*/
 	/* Discard the most significant part. Note the big-endianess */
-	return (buf[0]<<24) | (buf[5]<<16) | (buf[6]<<8) | buf[7];
+	return (buf[4]<<24) | (buf[5]<<16) | (buf[6]<<8) | buf[7];
 #endif
 }
 

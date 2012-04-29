@@ -125,7 +125,7 @@ int send_msg(const char *dest_addr, const struct packet *pkt){
 			(int8_t)pkt->ip[1], (int8_t)pkt->ip[2], (int8_t)pkt->ip[3]);
 
 		/* Send UDP packet */
-		if((numbytes = sendto(sockfd, buf, bufsize, 0,
+		if((numbytes = sendto(sockfd, buf, PACKETSIZE, 0,
 						servinfo->ai_addr, servinfo->ai_addrlen)) == -1){
 			perror("sendto");
 			return -1;
