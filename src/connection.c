@@ -16,7 +16,7 @@
 #define PORT "3700"
 
 static int sockfd;
-//static struct addrinfo *own_addr;
+static struct addrinfo *own_addrinfo;
 
 const char* cmd_str(enum command cmd)
 {
@@ -70,6 +70,10 @@ void *get_in_addr(struct sockaddr *sa){
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+int compare_ip(struct sockaddr *sa, struct sockaddr *sb){
+	return *((long int *)get_in_addr(sa)) == *((long int*)get_in_addr(sb));
+}
+
 /* There is no way to use this function "as is" on the same host.
 	They ...*/
 int open_udp_socket(){
@@ -93,6 +97,9 @@ int open_udp_socket(){
 			perror("socket");
 			continue;
 		}
+
+		/* Save local addrinfo to own_addrinfo */
+		own_addrinfo = servinfo;
 
 		/* Set socket to reuse address. Workaround for abnormal clousures */
 		if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval,
@@ -123,7 +130,8 @@ int open_udp_socket(){
 		return -1;
 	}
 
-	freeaddrinfo(servinfo);
+	/* Don't free addrinfo as it is used later by own_addrinfo */
+	/*freeaddrinfo(servinfo);*/
 
 	return 0;
 }
@@ -184,6 +192,8 @@ int recv_msg(struct packet *pkt, struct timeval *tv){
 	FD_ZERO(&readfds);
 	FD_SET(sockfd, &readfds);
 
+	/* Hahahahahahi. Lots of fun */
+try_again:
 	select(sockfd+1, &readfds, NULL, NULL, tv);
 
 	/* Timeout expired */
@@ -197,6 +207,11 @@ int recv_msg(struct packet *pkt, struct timeval *tv){
 						(struct sockaddr *)&their_addr, &their_addr_len)) == -1){
 			perror("rcvfrom");
 			return -1;
+		}
+		/* Blocking packets coming from you */
+		if(compare_ip(own_addrinfo->ai_addr, (struct sockaddr *)&their_addr)){
+			printf("Equal IP\n");
+			goto try_again;
 		}
 
 		/* Deserialize structure */
