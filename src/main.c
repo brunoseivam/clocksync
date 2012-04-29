@@ -85,6 +85,9 @@ int main(int argc, char **argv)
 	/* Startup: */
 	build_packet(&pkt, CMD_MASTERREQ, 0); /* Prepare message     */
 	send_msg(BROADCAST, &pkt);			     /* Search for a master */
+	printf("------------------\n");
+	print_packet(&pkt);
+	printf("------------------\n");
    state = STATE_STARTUP;					  /* Set STARTUP state   */
 	set_timer(&tval, STARTUP_TIMEOUT);	  /* Set timeout         */
 	printf("STATE: STARTUP\n");
@@ -95,9 +98,10 @@ int main(int argc, char **argv)
 
 		command = pkt.type;
 
+		printf("------------------\n");
 		printf("got packet:\n");
 		print_packet(&pkt);
-
+		printf("------------------\n");
 
       switch(state | command)
       {
@@ -105,6 +109,9 @@ int main(int argc, char **argv)
          case(STATE_STARTUP | CMD_TIMEOUT):
 				build_packet(&pkt, CMD_MASTERUP, 0);
             send_msg(BROADCAST, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
             state = STATE_MASTER;
 				printf("STATE: MASTER\n");
 				set_timer(&tval, MASTER_TIMEOUT);	  /* Set timeout         */
@@ -113,6 +120,9 @@ int main(int argc, char **argv)
 			case(STATE_STARTUP | CMD_MASTERUP):
 				build_packet(&pkt, CMD_SLAVEUP, 0);
 				send_msg(pkt.ip, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				// no break;
 			case(STATE_STARTUP | CMD_MASTERREQ):
 			case(STATE_STARTUP | CMD_MASTERACK):
@@ -131,11 +141,17 @@ int main(int argc, char **argv)
 			case(STATE_MASTER | CMD_MASTERREQ):
 				build_packet(&pkt, CMD_MASTERACK, 0);
 				send_msg(pkt.ip, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				break;
 
 			case(STATE_MASTER | CMD_QUIT):
 				build_packet(&pkt, CMD_ACK, 0);
 				send_msg(pkt.ip, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				state = STATE_SLAVE;
 				printf("STATE_SLAVE\n");
 				set_timer(&tval, SLAVE_TIMEOUT);
@@ -145,6 +161,9 @@ int main(int argc, char **argv)
 			case(STATE_MASTER | CMD_MASTERUP):
 				build_packet(&pkt, CMD_QUIT, 0);
 				send_msg(pkt.ip, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				break;
 
 
@@ -153,6 +172,9 @@ int main(int argc, char **argv)
 			case(STATE_SLAVE | CMD_TIMEOUT):
 				build_packet(&pkt, CMD_ELECTION, 0);
 				send_msg(BROADCAST, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				state = STATE_CANDIDATE;
 				printf("STATE_CANDIDATE\n");
 				set_timer(&tval, CANDIDATE_TIMEOUT);
@@ -161,11 +183,17 @@ int main(int argc, char **argv)
 			case(STATE_SLAVE | CMD_MASTERUP):
 				build_packet(&pkt, CMD_SLAVEUP, 0);
 				send_msg(BROADCAST, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				break;
 
 			case(STATE_SLAVE | CMD_ELECTION):
 				build_packet(&pkt, CMD_ACCEPT, 0);
 				send_msg(pkt.ip, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				state = STATE_ACCEPT;
 				printf("STATE_ACCEPT\n");
 				set_timer(&tval, ACCEPT_TIMEOUT);
@@ -175,6 +203,9 @@ int main(int argc, char **argv)
 			case(STATE_CANDIDATE | CMD_TIMEOUT):
 				build_packet(&pkt, CMD_MASTERUP, 0);
 				send_msg(BROADCAST, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				state = STATE_MASTER;
 				printf("STATE_MASTER\n");
 				set_timer(&tval, MASTER_TIMEOUT);
@@ -183,17 +214,26 @@ int main(int argc, char **argv)
 			case(STATE_CANDIDATE | CMD_ELECTION):
 				build_packet(&pkt, CMD_REFUSE, 0);
 				send_msg(pkt.ip, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				break;
 
 			case(STATE_CANDIDATE | CMD_ACCEPT):
 				build_packet(&pkt, CMD_ACK, 0);
 				send_msg(pkt.ip, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				break;
 
 			case(STATE_CANDIDATE | CMD_QUIT):
 			case(STATE_CANDIDATE | CMD_REFUSE):
 				build_packet(&pkt, CMD_ACK, 0);
 				send_msg(pkt.ip, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				//no break
 
 			case(STATE_CANDIDATE | CMD_MASTERREQ):
@@ -212,11 +252,17 @@ int main(int argc, char **argv)
 			case(STATE_ACCEPT | CMD_ELECTION):
 				build_packet(&pkt, CMD_REFUSE, 0);
 				send_msg(pkt.ip, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				break;
 
 			case(STATE_ACCEPT | CMD_MASTERUP):
 				build_packet(&pkt, CMD_SLAVEUP, 0);
 				send_msg(pkt.ip, &pkt);
+				printf("------------------\n");
+				print_packet(&pkt);
+				printf("------------------\n");
 				break;
 
       }
