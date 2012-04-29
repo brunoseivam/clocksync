@@ -38,6 +38,7 @@ void packi32(unsigned char *buf, unsigned int i)
 void packi64(unsigned char *buf, unsigned long i)
 {
 #ifdef x86_64
+	printf("packi64 i = %016X\n", i);
 	*buf++ = i>>56; *buf++ = i>>48;
 	*buf++ = i>>40; *buf++ = i>>32;
 	*buf++ = i>>24; *buf++ = i>>16;
@@ -79,7 +80,7 @@ unsigned long unpacki64(unsigned char *buf)
 			 ((unsigned long) buf[6] << 8 ) | buf[7];
 #else /*x86_32*/
 	/* Discard the most significant part. Note the big-endianess */
-	return (buf[0]<<24) | (buf[5]<<16) | (buf[6]<<8) | buf[7];
+	return (buf[4]<<24) | (buf[5]<<16) | (buf[6]<<8) | buf[7];
 #endif
 }
 
