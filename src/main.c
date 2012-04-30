@@ -197,8 +197,6 @@ int main(int argc, char **argv)
 				adjust_master_addslave(pkt.ip, &pkt.time);
 				break;
 
-
-
 			case(STATE_MASTER_ADJTIME | CMD_TIMEOUT):
 				/* Calculate avg clocks and send to each slave his correction */
 				/* Restart the synchronization timer */

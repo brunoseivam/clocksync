@@ -6,31 +6,33 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <sys/time.h>
 
 
-static struct time_list list;
+static struct list time_list;
 static struct timeval send_time;
 
 int adjust_master_prepare(void)
 {
 	gettimeofday(&send_time, NULL);
 
-	list_delall(&list);
+	/* Reinitialize list */
+	time_list.list_op->list_delall(&time_list);
+	list_init(&time_list);
 
 	return 0;
 }
 
 int adjust_master_addslave(const unsigned char ip[4], const struct timeval *time)
 {
-	int i;
-	struct time_listnode *node;
+	struct nodedata *node;
 	struct timeval recv_time, rtt, slave_recv_time;
 
 	gettimeofday(&recv_time, NULL);			// When we received slave's answer
 
-	node = (struct time_listnode*) malloc(sizeof(struct time_listnode));
+	node = (struct nodedata*) malloc(sizeof(struct nodedata));
 
 	/* Estimate half RTT */
 	timersub(&recv_time, &send_time, &rtt);
@@ -39,60 +41,60 @@ int adjust_master_addslave(const unsigned char ip[4], const struct timeval *time
 	/* Slave received CLOCKREQ at... */
 	timeradd(&send_time, &rtt, &slave_recv_time);
 
-
 	/* SLAVE - MASTER clock = difference.
 	 * If difference is negative, slave clock is behind master clock.
 	 */
 	timersub(time, &slave_recv_time, &node->time);
 
-	for(i = 0; i < 4; ++i)
-		node->ip[i] = ip[i];
+	/*for(i = 0; i < 4; ++i)
+		node->ip[i] = ip[i];*/
+	memcpy(node->ip, ip, 4*sizeof(unsigned char));
 
-	list_add(&list, node);
+	time_list.list_op->list_add(&time_list, node);
 
 	return 0;
 }
 
 int adjust_master_calcandsend(void)
 {
-	struct time_listnode *p;
+	struct listnode *p;
 	struct timeval sum;
 
 	struct timeval current_time, new_time;
 
 
-	if(list_isempty(&list))
+	if(time_list.list_op->list_isempty(&time_list))
 		return -1;
 
 	/* Sum all differences */
 	timerclear(&sum);
 
-	for(p = list.list; p != NULL; p = p->next)	// Head of list
+	for(p = time_list.list; p != NULL; p = p->next)	// Head of list
 	{
 		struct timeval newsum;
-		timeradd(&sum, &p->time, &newsum);
+		timeradd(&sum, &p->data.time, &newsum);
 
 		sum.tv_sec = newsum.tv_sec;
 		sum.tv_usec = newsum.tv_usec;
 	}
 
 	/* Mean of the diferences (include master (+1)) */
-	sum.tv_sec /= list.numelem + 1;
-	sum.tv_usec /= list.numelem + 1;
+	sum.tv_sec /= time_list.list_op->list_num_elem(&time_list) + 1;
+	sum.tv_usec /= time_list.list_op->list_num_elem(&time_list) + 1;
 
 	/* Adjust slave clocks */
-	for(p = list.list; p != NULL; p = p->next)
+	for(p = time_list.list; p != NULL; p = p->next)
 	{
 		struct packet pkt;
 
 		/* Mean difference - Slave difference */
-		timersub(&sum, &p->time, &pkt.time);
+		timersub(&sum, &p->data.time, &pkt.time);
 
 		pkt.type    = CMD_CLOCKSYNC;
 		pkt.version = CLOCKSYNC_VERSION;
 		pkt.seqnum  = 0;
 
-		send_msg(p->ip, &pkt);
+		send_msg(p->data.ip, &pkt);
 	}
 
 	/* Adjust master clock */
