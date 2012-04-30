@@ -24,6 +24,7 @@ enum state
 
 const unsigned char BROADCAST[4] = {255,255,255,255};
 /*const unsigned char BROADCAST[4] = {192,168,1,255};*/
+
 const struct timeval STARTUP_TIMEOUT =
 {
 	.tv_sec = 5,
@@ -77,7 +78,7 @@ void build_send_packet(const unsigned char dest[4],
 {
 	struct packet pkt;
 	pkt.type = cmd;
-	pkt.version = 1;
+	pkt.version = CLOCKSYNC_VERSION;
 	pkt.seqnum = 0;
 
 	if(put_time)
@@ -142,7 +143,7 @@ int main(int argc, char **argv)
       recv_msg(&pkt, &tval);
 
 		command = pkt.type;
-		printf("Command received = %d\n", command);
+		//printf("Command received = %d\n", command);
 
       switch(state | command)
       {
@@ -173,7 +174,7 @@ int main(int argc, char **argv)
 				 * be synchronized*/
 				change_state(&state, STATE_MASTER_ADJTIME, &tval, MASTER_ADJTIME_TIMEOUT);
 				/* Possibly new thread? Non blocking function...*/
-				master_adjtime();
+				adjust_master_prepare();
 				break;
 
 			case(STATE_MASTER | CMD_MASTERREQ):
@@ -191,10 +192,18 @@ int main(int argc, char **argv)
 				break;
 
          /*    MASTER_ADJTIME    */
+			case(STATE_MASTER_ADJTIME | CMD_CLOCKREQ_RESPONSE):
+				/* Got time from client */
+				adjust_master_addslave(pkt.ip, &pkt.time);
+				break;
+
+
+
 			case(STATE_MASTER_ADJTIME | CMD_TIMEOUT):
 				/* Calculate avg clocks and send to each slave his correction */
 				/* Restart the synchronization timer */
 				change_state(&state, STATE_MASTER, &tval, MASTER_TIMEOUT);
+				adjust_master_calcandsend();
 				break;
 
          /*    SLAVE    */
@@ -225,7 +234,7 @@ int main(int argc, char **argv)
 			case(STATE_SLAVE_ADJTIME | CMD_CLOCKSYNC):
 				/* Receive packet from master, adjust local time and return to
 				 * your rightful state (slave of course... =])*/
-				slave_adjtime();
+				adjust_slave_clock(&pkt.time);
 				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
 				break;
 
