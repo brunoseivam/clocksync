@@ -12,13 +12,14 @@
 
 enum state
 {
-   STATE_STARTUP		= 1 << 5,
-   STATE_SLAVE			= 2 << 5,
-   STATE_CANDIDATE	= 3 << 5,
-   STATE_ACCEPT		= 4 << 5,
-   STATE_MASTER		= 5 << 5
+   STATE_STARTUP			= 1 << 5,
+   STATE_SLAVE				= 2 << 5,
+   STATE_SLAVE_ADJTIME	= 3 << 5,
+   STATE_CANDIDATE		= 4 << 5,
+   STATE_ACCEPT			= 5 << 5,
+   STATE_MASTER			= 6 << 5,
+   STATE_MASTER_ADJTIME	= 7 << 5
 };
-
 
 const unsigned char BROADCAST[4] = {255,255,255,255};
 const struct timeval STARTUP_TIMEOUT =
@@ -33,6 +34,12 @@ const struct timeval SLAVE_TIMEOUT =
 	.tv_usec = 0
 };
 
+const struct timeval SLAVE_ADJTIME_TIMEOUT =
+{
+	.tv_sec = 5,
+	.tv_usec = 0
+};
+
 const struct timeval CANDIDATE_TIMEOUT =
 {
 	.tv_sec = 5,
@@ -42,6 +49,12 @@ const struct timeval CANDIDATE_TIMEOUT =
 const struct timeval MASTER_TIMEOUT =
 {
 	.tv_sec = 2,
+	.tv_usec = 0
+};
+
+const struct timeval MASTER_ADJTIME_TIMEOUT =
+{
+	.tv_sec = 5,
 	.tv_usec = 0
 };
 
@@ -74,8 +87,6 @@ void build_send_packet(const unsigned char dest[4],
 	}
 
 	send_msg(dest, &pkt);
-
-
 }
 
 void change_state(enum state *current_state, enum state next_state,
@@ -92,6 +103,9 @@ void change_state(enum state *current_state, enum state next_state,
 		case STATE_SLAVE:
 			printf("SLAVE\n");
 			break;
+		case STATE_SLAVE_ADJTIME:
+			printf("SLAVE_ADJTIME\n");
+			break;
 		case STATE_CANDIDATE:
 			printf("CANDIDATE\n");
 			break;
@@ -101,10 +115,11 @@ void change_state(enum state *current_state, enum state next_state,
 		case STATE_MASTER:
 			printf("MASTER\n");
 			break;
+		case STATE_MASTER_ADJTIME:
+			printf("MASTER_ADJTIME\n");
+			break;
 	}
-
 }
-
 
 int main(int argc, char **argv)
 {
@@ -145,10 +160,11 @@ int main(int argc, char **argv)
 
 			/*    MASTER    */
 			case(STATE_MASTER | CMD_TIMEOUT):
-				build_send_packet(BROADCAST, CMD_ADJUST, 1);
+				/* Does the Master needs to send his clock? */
+				build_send_packet(BROADCAST, CMD_CLOCKREQ, 1);
 				//change_state(&state, STATE_MASTER, &tval, MASTER_TIMEOUT);
 				/* Change to an intermediate state in order to wait for all slaves
-				 * to send their clocks. After the ADJTIME_TIMEOUT no more clock
+				 * to send their clocks. After the MASTER_ADJTIME_TIMEOUT no more clock
 				 * packets will be accepted and the "slow" slaves, if any, won't
 				 * be synchronized*/
 				change_state(&state, STATE_MASTER_ADJTIME, &tval, MASTER_ADJTIME_TIMEOUT);
@@ -176,8 +192,8 @@ int main(int argc, char **argv)
 				break;
 
          /*    SLAVE    */
-         case(STATE_SLAVE | CMD_SENDCLOCK):
-            printf("got adjust\n");
+         case(STATE_SLAVE | CMD_CLOCKREQ):
+            printf("got clock req!\n");
 				/* Send clock packet to master and change to an intermediate state
 				 * in order to wait for a synch packet */
 				/*build_send_packet(pkt.ip, CMD_QUIT, 0);*/
@@ -199,15 +215,16 @@ int main(int argc, char **argv)
 				break;
 
          /*    SLAVE ADJTIME   */
-			case(STATE_SLAVE_ADJTIME | CMD_ADJTIME):
+			case(STATE_SLAVE_ADJTIME | CMD_CLOCKSYNC):
 				/* Receive packet from master, adjust local time and return to
 				 * your rightful state (slave of course... =])*/
 				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
 				break;
 
+				/* Merge this case with the above */
 			/* Slave sent his clock to master but did not receive his synch packet */
 			/* What can I do? */
-			case(STATE_SLAVE_ADJTIM | CMD_TIMEOUT):
+			case(STATE_SLAVE_ADJTIME | CMD_TIMEOUT):
 				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
 				break;
 

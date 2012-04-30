@@ -10,6 +10,7 @@ struct packet{
 	unsigned char type;
 	unsigned char version;
 	unsigned short seqnum;
+	/*struct timeval own_time */
 	struct timeval time;
 	unsigned char ip[4];
 };
