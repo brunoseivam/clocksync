@@ -161,6 +161,7 @@ int main(int argc, char **argv)
 				break;
 
 			/*    MASTER    */
+			/* Launch a new thread and process separately? Prevents loss of messages */
 			case(STATE_MASTER | CMD_TIMEOUT):
 				/* Does the Master needs to send his clock? */
 				build_send_packet(BROADCAST, CMD_CLOCKREQ, 1);
