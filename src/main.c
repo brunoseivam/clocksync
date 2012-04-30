@@ -22,6 +22,7 @@ enum state
 };
 
 const unsigned char BROADCAST[4] = {255,255,255,255};
+/*const unsigned char BROADCAST[4] = {192,168,1,255};*/
 const struct timeval STARTUP_TIMEOUT =
 {
 	.tv_sec = 5,
@@ -36,8 +37,8 @@ const struct timeval SLAVE_TIMEOUT =
 
 const struct timeval SLAVE_ADJTIME_TIMEOUT =
 {
-	.tv_sec = 5,
-	.tv_usec = 0
+	.tv_sec = 0,
+	.tv_usec = 100000
 };
 
 const struct timeval CANDIDATE_TIMEOUT =
@@ -48,14 +49,14 @@ const struct timeval CANDIDATE_TIMEOUT =
 
 const struct timeval MASTER_TIMEOUT =
 {
-	.tv_sec = 2,
+	.tv_sec = 4,
 	.tv_usec = 0
 };
 
 const struct timeval MASTER_ADJTIME_TIMEOUT =
 {
-	.tv_sec = 5,
-	.tv_usec = 0
+	.tv_sec = 0,
+	.tv_usec = 100000
 };
 
 const struct timeval ACCEPT_TIMEOUT =
@@ -140,6 +141,7 @@ int main(int argc, char **argv)
       recv_msg(&pkt, &tval);
 
 		command = pkt.type;
+		printf("Command received = %d\n", command);
 
       switch(state | command)
       {
