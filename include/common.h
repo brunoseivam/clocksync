@@ -13,7 +13,9 @@ enum command
 	CMD_ACCEPT,
 	CMD_REFUSE,
 	CMD_QUIT,
-	CMD_ADJUST
+	/*CMD_ADJUST*/
+	CMD_CLOCKREQ,
+	CMD_CLOCKSYNC
 };
 
 #endif

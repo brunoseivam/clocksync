@@ -23,7 +23,7 @@ static int sockfd;
 static unsigned char own_ip[OWN_IP_MAX][4];
 static int own_ip_len = 0;
 
-static void printip(unsigned char ip[4])
+static void printip(const unsigned char ip[4])
 {
    printf("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 }
@@ -78,8 +78,6 @@ static void get_own_ip_list(void)
 
    printf("Found %d address%s\n\n", own_ip_len, own_ip_len > 1 ? "es" : "");
 
-
-
    if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
 }
 
@@ -107,11 +105,13 @@ static const char* cmd_str(enum command cmd)
 			return "TIMEOUT";
 		case CMD_ACK:
 			return "ACK";
-      case CMD_ADJUST:
-         return "ADJUST TIME";
+      case CMD_CLOCKREQ:
+         return "CLOCK REQUISITION";
+		case CMD_CLOCKSYNC:
+			return "CLOCK SYNC";
 	}
-	return "UNKNOWN COMMAND";
 
+	return "UNKNOWN COMMAND";
 }
 
 void print_packet(struct packet *pkt)
@@ -169,9 +169,6 @@ int open_udp_socket()
 			continue;
 		}
 
-		/* Save local addrinfo to own_addrinfo */
-		own_addrinfo = servinfo;
-
 		/* Set socket to reuse address. Workaround for abnormal clousures */
 		if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval,
 					sizeof(optval)) == -1){
@@ -221,12 +218,6 @@ int send_msg(const unsigned char dest_addr_ip[4], const struct packet *pkt)
 												 (unsigned int) dest_addr_ip[2],
 												 (unsigned int) dest_addr_ip[3]);
 
-<<<<<<< HEAD
-	printf("------------------\n");
-	printf("SEND TO %s\n", dest_addr);
-
-=======
->>>>>>> master
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_DGRAM;
@@ -258,7 +249,6 @@ int send_msg(const unsigned char dest_addr_ip[4], const struct packet *pkt)
    printip(dest_addr_ip);
    printf("]\n");
 
-
 	return numbytes;
 }
 
@@ -282,7 +272,7 @@ int recv_msg(struct packet *pkt, struct timeval *tv)
       {
          pkt->type = CMD_TIMEOUT;
          pkt->ip[0] = pkt->ip[1] = pkt->ip[2] = pkt->ip[3] = 0;
-         pkt->ip[0] = pkt->ip[1] = pkt->ip[2] = pkt->ip[3] = 0;
+         /*pkt->ip[0] = pkt->ip[1] = pkt->ip[2] = pkt->ip[3] = 0*/;
          break;
       }
       else
