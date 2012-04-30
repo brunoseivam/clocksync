@@ -1,6 +1,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#define CLOCKSYNC_VERSION 1
+
 enum command
 {
 	CMD_TIMEOUT,

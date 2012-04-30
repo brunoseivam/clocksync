@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <ifaddrs.h>
+#include <sys/time.h>
 
 #include "connection.h"
 #include "pack.h"
