@@ -77,6 +77,7 @@ int adjust_master_calcandsend(void)
 		sum.tv_usec = newsum.tv_usec;
 	}
 
+
 	/* Mean of the diferences (include master (+1)) */
 	sum.tv_sec /= time_list.list_op->list_num_elem(&time_list) + 1;
 	sum.tv_usec /= time_list.list_op->list_num_elem(&time_list) + 1;
