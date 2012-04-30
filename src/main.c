@@ -41,7 +41,7 @@ const struct timeval CANDIDATE_TIMEOUT =
 
 const struct timeval MASTER_TIMEOUT =
 {
-	.tv_sec = 5,
+	.tv_sec = 2,
 	.tv_usec = 0
 };
 
@@ -126,11 +126,6 @@ int main(int argc, char **argv)
 
 		command = pkt.type;
 
-		printf("------------------\n");
-		printf("got packet:\n");
-		print_packet(&pkt);
-		printf("------------------\n");
-
       switch(state | command)
       {
 			/*    STARTUP    */
@@ -150,8 +145,13 @@ int main(int argc, char **argv)
 
 			/*    MASTER    */
 			case(STATE_MASTER | CMD_TIMEOUT):
-				change_state(&state, STATE_MASTER, &tval, MASTER_TIMEOUT);
-				// ADJUST TIMES
+				build_send_packet(BROADCAST, CMD_ADJUST, 1);
+				//change_state(&state, STATE_MASTER, &tval, MASTER_TIMEOUT);
+				/* Change to an intermediate state in order to wait for all slaves
+				 * to send their clocks. After the ADJTIME_TIMEOUT no more clock
+				 * packets will be accepted and the "slow" slaves, if any, won't
+				 * be synchronized*/
+				change_state(&state, STATE_MASTER_ADJTIME, &tval, MASTER_ADJTIME_TIMEOUT);
 				break;
 
 			case(STATE_MASTER | CMD_MASTERREQ):
@@ -168,7 +168,22 @@ int main(int argc, char **argv)
 				build_send_packet(pkt.ip, CMD_QUIT, 0);
 				break;
 
+         /*    MASTER_ADJTIME    */
+			case(STATE_MASTER_ADJTIME | CMD_TIMEOUT):
+				/* Calculate avg clocks and send to each slave his correction */
+				/* Restart the synchronization timer */
+				change_state(&state, STATE_MASTER, &tval, MASTER_TIMEOUT);
+				break;
+
          /*    SLAVE    */
+         case(STATE_SLAVE | CMD_SENDCLOCK):
+            printf("got adjust\n");
+				/* Send clock packet to master and change to an intermediate state
+				 * in order to wait for a synch packet */
+				/*build_send_packet(pkt.ip, CMD_QUIT, 0);*/
+            change_state(&state, STATE_SLAVE_ADJTIME, &tval, SLAVE_ADJTIME_TIMEOUT);
+            break;
+
 			case(STATE_SLAVE | CMD_TIMEOUT):
 				build_send_packet(BROADCAST, CMD_ELECTION, 0);
 				change_state(&state, STATE_CANDIDATE, &tval, CANDIDATE_TIMEOUT);
@@ -181,6 +196,19 @@ int main(int argc, char **argv)
 			case(STATE_SLAVE | CMD_ELECTION):
 				build_send_packet(pkt.ip, CMD_ACCEPT, 0);
 				change_state(&state, STATE_ACCEPT, &tval, ACCEPT_TIMEOUT);
+				break;
+
+         /*    SLAVE ADJTIME   */
+			case(STATE_SLAVE_ADJTIME | CMD_ADJTIME):
+				/* Receive packet from master, adjust local time and return to
+				 * your rightful state (slave of course... =])*/
+				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
+				break;
+
+			/* Slave sent his clock to master but did not receive his synch packet */
+			/* What can I do? */
+			case(STATE_SLAVE_ADJTIM | CMD_TIMEOUT):
+				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
 				break;
 
 			/*    CANDIDATE   */
