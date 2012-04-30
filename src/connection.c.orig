@@ -23,7 +23,7 @@ static int sockfd;
 static unsigned char own_ip[OWN_IP_MAX][4];
 static int own_ip_len = 0;
 
-static void printip(const unsigned char ip[4])
+static void printip(unsigned char ip[4])
 {
    printf("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 }
@@ -44,15 +44,13 @@ static int is_own_ip(unsigned char ip[4])
 
    for(i = 0; i < own_ip_len; ++i)
    {
-		int diff = 0;
+      int different = 0;
+
       for(j = 0; j < 4; ++j)
          if(own_ip[i][j] != ip[j])
-			{
-				diff = 1;
-            break;
-			}
+            different = 1;
 
-		if(!diff)
+      if(!different)
          return 1;
    }
 
@@ -83,6 +81,8 @@ static void get_own_ip_list(void)
 
    printf("Found %d address%s\n\n", own_ip_len, own_ip_len > 1 ? "es" : "");
 
+
+
    if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
 }
 
@@ -110,15 +110,11 @@ static const char* cmd_str(enum command cmd)
 			return "TIMEOUT";
 		case CMD_ACK:
 			return "ACK";
-      case CMD_CLOCKREQ:
-         return "CLOCK REQUISITION";
-		case CMD_CLOCKSYNC:
-			return "CLOCK SYNC";
-		case CMD_CLOCKREQ_RESPONSE:
-			return "CLOCKREQ RESPONSE";
+      case CMD_ADJUST:
+         return "ADJUST TIME";
 	}
-
 	return "UNKNOWN COMMAND";
+
 }
 
 void print_packet(struct packet *pkt)
@@ -145,10 +141,6 @@ void *get_in_addr(struct sockaddr *sa)
 	}
 
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
-
-int compare_ip(struct sockaddr *sa, struct sockaddr *sb){
-	return *((long int *)get_in_addr(sa)) == *((long int*)get_in_addr(sb));
 }
 
 /* There is no way to use this function "as is" on the same host.
@@ -225,6 +217,12 @@ int send_msg(const unsigned char dest_addr_ip[4], const struct packet *pkt)
 												 (unsigned int) dest_addr_ip[2],
 												 (unsigned int) dest_addr_ip[3]);
 
+<<<<<<< HEAD
+=======
+	printf("------------------\n");
+	printf("SEND TO %s\n", dest_addr);
+
+>>>>>>> added print_packet for debug
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_DGRAM;
@@ -256,6 +254,7 @@ int send_msg(const unsigned char dest_addr_ip[4], const struct packet *pkt)
    printip(dest_addr_ip);
    printf("]\n");
 
+
 	return numbytes;
 }
 
@@ -279,7 +278,7 @@ int recv_msg(struct packet *pkt, struct timeval *tv)
       {
          pkt->type = CMD_TIMEOUT;
          pkt->ip[0] = pkt->ip[1] = pkt->ip[2] = pkt->ip[3] = 0;
-         /*pkt->ip[0] = pkt->ip[1] = pkt->ip[2] = pkt->ip[3] = 0*/;
+         pkt->ip[0] = pkt->ip[1] = pkt->ip[2] = pkt->ip[3] = 0;
          break;
       }
       else
@@ -299,7 +298,7 @@ int recv_msg(struct packet *pkt, struct timeval *tv)
                &pkt->time.tv_sec, &pkt->time.tv_usec, &pkt->ip[0], &pkt->ip[1],
                &pkt->ip[2], &pkt->ip[3]);
 
-         /* Get source ip. Working only for IPv4 for now */
+         /* Get sorce ip. Working only for IPv4 for now */
          get_ip_as_bytes(pkt->ip, &their_addr);
       }
 	}
