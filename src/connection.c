@@ -299,7 +299,7 @@ int recv_msg(struct packet *pkt, struct timeval *tv)
                &pkt->time.tv_sec, &pkt->time.tv_usec, &pkt->ip[0], &pkt->ip[1],
                &pkt->ip[2], &pkt->ip[3]);
 
-         /* Get sorce ip. Working only for IPv4 for now */
+         /* Get source ip. Working only for IPv4 for now */
          get_ip_as_bytes(pkt->ip, &their_addr);
       }
 	}

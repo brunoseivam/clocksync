@@ -221,6 +221,7 @@ int main(int argc, char **argv)
 				break;
 
          /*    SLAVE ADJTIME   */
+				/* TODO is this state really necessary? */
 			case(STATE_SLAVE_ADJTIME | CMD_CLOCKSYNC):
 				/* Receive packet from master, adjust local time and return to
 				 * your rightful state (slave of course... =])*/
