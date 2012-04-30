@@ -121,6 +121,7 @@ static void list_delall_t(struct list *list)
 		return;
 	}*/
 
+	printf("beleza ate aqui\n");
 	/* First element to be deleted */
 	while((node = list_delfirst_t(list)) != NULL){
 		free(node);

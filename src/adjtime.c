@@ -18,8 +18,7 @@ int adjust_master_prepare(void)
 {
 	gettimeofday(&send_time, NULL);
 
-	/* Reinitialize list */
-	time_list.list_op->list_delall(&time_list);
+	/* Initialize list */
 	list_init(&time_list);
 
 	return 0;
@@ -101,6 +100,9 @@ int adjust_master_calcandsend(void)
 	gettimeofday(&current_time, NULL);
 	timeradd(&current_time, &sum, &new_time);
 	settimeofday(&new_time, NULL);
+
+	/* Delete list */
+	time_list.list_op->list_delall(&time_list);
 
 	return 0;
 }

@@ -40,5 +40,11 @@ int main()
 	my_list.list_op->list_print_all(&my_list);
 	printf("----------------\n");
 
+	list_init(&my_list);
+
+	printf("----------------\n");
+	my_list.list_op->list_print_all(&my_list);
+	printf("----------------\n");
+
 	return 0;
 }
