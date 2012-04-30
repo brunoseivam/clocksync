@@ -170,7 +170,8 @@ int list_init(struct list *list)
 	list->list = (struct listnode *)malloc(sizeof(struct listnode));
 
 	list->list->prev = list->list->next = NULL;
-	list->list->data.time.tv_sec = list->list->data.time.tv_usec = 0;
+	/*list->list->data.time.tv_sec = list->list->data.time.tv_usec = 0;*/
+	timerclear(&list->list->data.time);
 	memcpy(list->list->data.ip, "AAAA", 4*sizeof(unsigned char));
 	list->num_elem = 0;
 
