@@ -41,7 +41,7 @@ const struct timeval CANDIDATE_TIMEOUT =
 
 const struct timeval MASTER_TIMEOUT =
 {
-	.tv_sec = 5,
+	.tv_sec = 2,
 	.tv_usec = 0
 };
 
@@ -126,10 +126,6 @@ int main(int argc, char **argv)
 
 		command = pkt.type;
 
-		printf("got packet:\n");
-		print_packet(&pkt);
-
-
       switch(state | command)
       {
 			/*    STARTUP    */
@@ -149,8 +145,8 @@ int main(int argc, char **argv)
 
 			/*    MASTER    */
 			case(STATE_MASTER | CMD_TIMEOUT):
+				build_send_packet(BROADCAST, CMD_ADJUST, 1);
 				change_state(&state, STATE_MASTER, &tval, MASTER_TIMEOUT);
-				// ADJUST TIMES
 				break;
 
 			case(STATE_MASTER | CMD_MASTERREQ):
@@ -168,6 +164,11 @@ int main(int argc, char **argv)
 				break;
 
          /*    SLAVE    */
+         case(STATE_SLAVE | CMD_ADJUST):
+            printf("got adjust\n");
+            change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
+            break;
+
 			case(STATE_SLAVE | CMD_TIMEOUT):
 				build_send_packet(BROADCAST, CMD_ELECTION, 0);
 				change_state(&state, STATE_CANDIDATE, &tval, CANDIDATE_TIMEOUT);

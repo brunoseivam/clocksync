@@ -12,7 +12,8 @@ enum command
 	CMD_ELECTION,
 	CMD_ACCEPT,
 	CMD_REFUSE,
-	CMD_QUIT
+	CMD_QUIT,
+	CMD_ADJUST
 };
 
 #endif
