@@ -7,7 +7,6 @@
 
 #include "connection.h"
 #include "common.h"
-#include "adjtime.h"
 
 #define PORT "3700"
 
@@ -38,8 +37,13 @@ const struct timeval SLAVE_TIMEOUT =
 
 const struct timeval SLAVE_ADJTIME_TIMEOUT =
 {
+<<<<<<< HEAD
 	.tv_sec = 0,
 	.tv_usec = 100000
+=======
+	.tv_sec = 5,
+	.tv_usec = 0
+>>>>>>> 2eb9eab1bf3a26acdf558b688d93a8b9c820b732
 };
 
 const struct timeval CANDIDATE_TIMEOUT =
@@ -50,14 +54,19 @@ const struct timeval CANDIDATE_TIMEOUT =
 
 const struct timeval MASTER_TIMEOUT =
 {
-	.tv_sec = 4,
+	.tv_sec = 2,
 	.tv_usec = 0
 };
 
 const struct timeval MASTER_ADJTIME_TIMEOUT =
 {
+<<<<<<< HEAD
 	.tv_sec = 0,
 	.tv_usec = 100000
+=======
+	.tv_sec = 5,
+	.tv_usec = 0
+>>>>>>> 2eb9eab1bf3a26acdf558b688d93a8b9c820b732
 };
 
 const struct timeval ACCEPT_TIMEOUT =
@@ -142,7 +151,6 @@ int main(int argc, char **argv)
       recv_msg(&pkt, &tval);
 
 		command = pkt.type;
-		printf("Command received = %d\n", command);
 
       switch(state | command)
       {
@@ -172,8 +180,6 @@ int main(int argc, char **argv)
 				 * packets will be accepted and the "slow" slaves, if any, won't
 				 * be synchronized*/
 				change_state(&state, STATE_MASTER_ADJTIME, &tval, MASTER_ADJTIME_TIMEOUT);
-				/* Possibly new thread? Non blocking function...*/
-				master_adjtime();
 				break;
 
 			case(STATE_MASTER | CMD_MASTERREQ):
@@ -202,7 +208,7 @@ int main(int argc, char **argv)
             printf("got clock req!\n");
 				/* Send clock packet to master and change to an intermediate state
 				 * in order to wait for a synch packet */
-				build_send_packet(pkt.ip, CMD_CLOCKREQ_RESPONSE, 1);
+				/*build_send_packet(pkt.ip, CMD_QUIT, 0);*/
             change_state(&state, STATE_SLAVE_ADJTIME, &tval, SLAVE_ADJTIME_TIMEOUT);
             break;
 
@@ -224,7 +230,6 @@ int main(int argc, char **argv)
 			case(STATE_SLAVE_ADJTIME | CMD_CLOCKSYNC):
 				/* Receive packet from master, adjust local time and return to
 				 * your rightful state (slave of course... =])*/
-				slave_adjtime();
 				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
 				break;
 

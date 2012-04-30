@@ -44,10 +44,15 @@ static int is_own_ip(unsigned char ip[4])
 
    for(i = 0; i < own_ip_len; ++i)
    {
+		int diff = 0;
       for(j = 0; j < 4; ++j)
          if(own_ip[i][j] != ip[j])
+			{
+				diff = 1;
             break;
+			}
 
+		if(!diff)
          return 1;
    }
 
@@ -109,6 +114,8 @@ static const char* cmd_str(enum command cmd)
          return "CLOCK REQUISITION";
 		case CMD_CLOCKSYNC:
 			return "CLOCK SYNC";
+		case CMD_CLOCKREQ_RESPONSE:
+			return "CLOCKREQ RESPONSE";
 	}
 
 	return "UNKNOWN COMMAND";

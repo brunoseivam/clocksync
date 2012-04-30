@@ -10,10 +10,10 @@ LIBS=-lrt
 
 PROG=main
 
-_DEPS = connection.h pack.h
+_DEPS = connection.h pack.h adjtime.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = main.o connection.o pack.o
+_OBJ = main.o connection.o pack.o adjtime.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: %.c $(DEPS)
