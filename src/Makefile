@@ -13,7 +13,6 @@ PROG=main
 PROGTEST=list_test
 
 .PHONY: all
-
 all: $(PROG) $(PROGTEST)
 
 _DEPS = connection.h pack.h adjtime.h list.h
@@ -41,6 +40,5 @@ $(PROGTEST): $(OBJTEST)
 	$(CC) $(CCFLAGS) -o $@ $^ $(CFLAGS)
 
 .PHONY: clean
-
 clean:
 	rm -f $(PROGTEST) $(PROG) $(ODIR)/*.o *~ core $(INCDIR)/*~ 

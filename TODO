@@ -1,0 +1,13 @@
+0 - Solve the "exit" problem 
+1 - ADJTIME_SLAVE state is necessary?
+2 - ADJTIME_MASTER would be better off if it were a separate 
+	processing thread. By doing this, we would avoid losing 
+	messages from new nodes and the state machine would be 
+	more responsive
+3 - Adjust timeouts!
+
+
+
+
+
+42 - Support IPv6? =]

@@ -117,6 +117,4 @@ int adjust_slave_clock(const struct timeval *diff)
 	settimeofday(&new_time, NULL);
 
 	return 0;
-
 }
-

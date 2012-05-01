@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
 
 #include "list.h"
 
@@ -14,7 +15,8 @@ static int list_num_elem_t(struct list *list)
 	return list->num_elem;
 }
 
-static void list_print_node_t(struct listnode *node){
+static void list_print_node_t(struct listnode *node)
+{
 	if(node == NULL){
 		printf("print_node received a null pointer\n");
 		return;
@@ -24,7 +26,8 @@ static void list_print_node_t(struct listnode *node){
 		node->data.time.tv_sec, node->data.time.tv_usec, node->data.ip);
 }
 
-static void list_print_all_t(struct list *list){
+static void list_print_all_t(struct list *list)
+{
 	struct listnode *it;
 
 	if(list == NULL){
@@ -62,10 +65,9 @@ static void list_add_t(struct list *list, struct nodedata *node)
 
 	/* Copy contents of node to node_i */
 	memcpy(&node_i->data.time.tv_sec, &node->time.tv_sec,
-			sizeof(long));
+			sizeof(time_t));
 	memcpy(&node_i->data.time.tv_usec, &node->time.tv_usec,
-			sizeof(long));
-	/* Ugly... */
+			sizeof(suseconds_t));
 	memcpy(node_i->data.ip, node->ip, 4*sizeof(unsigned char));
 
 	while(it->next != NULL){
@@ -121,7 +123,6 @@ static void list_delall_t(struct list *list)
 		return;
 	}*/
 
-	printf("beleza ate aqui\n");
 	/* First element to be deleted */
 	while((node = list_delfirst_t(list)) != NULL){
 		free(node);
@@ -170,7 +171,6 @@ int list_init(struct list *list)
 	list->list = (struct listnode *)malloc(sizeof(struct listnode));
 
 	list->list->prev = list->list->next = NULL;
-	/*list->list->data.time.tv_sec = list->list->data.time.tv_usec = 0;*/
 	timerclear(&list->list->data.time);
 	memcpy(list->list->data.ip, "AAAA", 4*sizeof(unsigned char));
 	list->num_elem = 0;
