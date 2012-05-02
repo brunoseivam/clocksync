@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <string.h>
+#include <time.h>
 
 #include "connection.h"
 #include "common.h"
@@ -15,15 +16,13 @@ enum state
 {
    STATE_STARTUP			= 1 << 5,
    STATE_SLAVE				= 2 << 5,
-   STATE_SLAVE_ADJTIME	= 3 << 5,
-   STATE_CANDIDATE		= 4 << 5,
-   STATE_ACCEPT			= 5 << 5,
-   STATE_MASTER			= 6 << 5,
-   STATE_MASTER_ADJTIME	= 7 << 5
+   STATE_CANDIDATE		= 3 << 5,
+   STATE_ACCEPT			= 4 << 5,
+   STATE_MASTER			= 5 << 5,
+   STATE_MASTER_ADJTIME	= 6 << 5
 };
 
 const unsigned char BROADCAST[4] = {255,255,255,255};
-/*const unsigned char BROADCAST[4] = {192,168,1,255};*/
 
 const struct timeval STARTUP_TIMEOUT =
 {
@@ -67,6 +66,19 @@ const struct timeval ACCEPT_TIMEOUT =
 	.tv_usec = 0
 };
 
+void print_time(struct timeval *time)
+{
+	time_t now_time;
+	struct tm *now_tm;
+	char tm_buf[64];
+
+	now_time = time->tv_sec;
+	now_tm = localtime(&now_time);
+
+	strftime(tm_buf, sizeof(tm_buf), "%d/%m/%Y %H:%M:%S", now_tm);
+	printf("%s.%06d\n", tm_buf, (unsigned int)time->tv_usec);
+}
+
 void set_timer(struct timeval* tval, struct timeval timeout)
 {
 	tval->tv_sec = timeout.tv_sec;
@@ -101,25 +113,22 @@ void change_state(enum state *current_state, enum state next_state,
 	switch(next_state)
 	{
 		case STATE_STARTUP:
-			printf("STARTUP\n");
+			printf("STARTUP");
 			break;
 		case STATE_SLAVE:
-			printf("SLAVE\n");
-			break;
-		case STATE_SLAVE_ADJTIME:
-			printf("SLAVE_ADJTIME\n");
+			printf("SLAVE");
 			break;
 		case STATE_CANDIDATE:
-			printf("CANDIDATE\n");
+			printf("CANDIDATE");
 			break;
 		case STATE_ACCEPT:
-			printf("ACCEPT\n");
+			printf("ACCEPT");
 			break;
 		case STATE_MASTER:
-			printf("MASTER\n");
+			printf("MASTER");
 			break;
 		case STATE_MASTER_ADJTIME:
-			printf("MASTER_ADJTIME\n");
+			printf("MASTER_ADJTIME");
 			break;
 	}
 }
@@ -143,8 +152,10 @@ int main(int argc, char **argv)
       struct timeval curtime;
       gettimeofday(&curtime, NULL);
 
-      printf("TIME: %10d sec\n     %10d usec\n",
-				(unsigned int)curtime.tv_sec, (unsigned int)curtime.tv_usec);
+		printf("  ");
+		print_time(&curtime);
+      /*printf(" TIME: %10d sec %10d usec\n",
+				(unsigned int)curtime.tv_sec, (unsigned int)curtime.tv_usec);*/
 
       recv_msg(&pkt, &tval);
 
@@ -212,11 +223,10 @@ int main(int argc, char **argv)
 
          /*    SLAVE    */
          case(STATE_SLAVE | CMD_CLOCKREQ):
-            printf("got clock req!\n");
 				/* Send clock packet to master and change to an intermediate state
 				 * in order to wait for a synch packet */
 				build_send_packet(pkt.ip, CMD_CLOCKREQ_RESPONSE, 1);
-            change_state(&state, STATE_SLAVE_ADJTIME, &tval, SLAVE_ADJTIME_TIMEOUT);
+            change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
             break;
 
 			case(STATE_SLAVE | CMD_TIMEOUT):
@@ -233,19 +243,10 @@ int main(int argc, char **argv)
 				change_state(&state, STATE_ACCEPT, &tval, ACCEPT_TIMEOUT);
 				break;
 
-         /*    SLAVE ADJTIME   */
-				/* TODO is this state really necessary? */
-			case(STATE_SLAVE_ADJTIME | CMD_CLOCKSYNC):
+			case(STATE_SLAVE | CMD_CLOCKSYNC):
 				/* Receive packet from master, adjust local time and return to
 				 * your rightful state (slave of course... =])*/
 				adjust_slave_clock(&pkt.time);
-				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
-				break;
-
-				/* Merge this case with the above */
-			/* Slave sent his clock to master but did not receive his synch packet */
-			/* What can I do? */
-			case(STATE_SLAVE_ADJTIME | CMD_TIMEOUT):
 				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
 				break;
 

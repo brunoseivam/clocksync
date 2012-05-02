@@ -9,7 +9,7 @@ LDIR =../lib
 
 LIBS=-lrt
 
-PROG=main
+PROG=clocksync
 PROGTEST=list_test
 
 .PHONY: all

@@ -61,7 +61,6 @@ int adjust_master_calcandsend(void)
 
 	struct timeval current_time, new_time;
 
-
 	if(time_list.list_op->list_isempty(&time_list))
 		return -1;
 
@@ -76,7 +75,6 @@ int adjust_master_calcandsend(void)
 		sum.tv_sec = newsum.tv_sec;
 		sum.tv_usec = newsum.tv_usec;
 	}
-
 
 	/* Mean of the diferences (include master (+1)) */
 	sum.tv_sec /= time_list.list_op->list_num_elem(&time_list) + 1;

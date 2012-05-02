@@ -22,8 +22,10 @@ static void list_print_node_t(struct listnode *node)
 		return;
 	}
 
-	printf("time.tv_sec = %ld\ntime.tv_usec = %ld\ntime.ip = %4s\n",
-		node->data.time.tv_sec, node->data.time.tv_usec, node->data.ip);
+	printf("time.tv_sec = %X\ntime.tv_usec = %X\ntime.ip = %d.%d.%d.%d\n",
+		(unsigned int)node->data.time.tv_sec, (unsigned int)node->data.time.tv_usec,
+		(unsigned int)node->data.ip[0], (unsigned int)node->data.ip[1],
+		(unsigned int)node->data.ip[2], (unsigned int)node->data.ip[3]);
 }
 
 static void list_print_all_t(struct list *list)
@@ -76,6 +78,7 @@ static void list_add_t(struct list *list, struct nodedata *node)
 
 	it->next = node_i;
 	node_i->prev = it;
+	node_i->next = NULL;
 
 	/* Increase the number of elements in the list */
 	list->num_elem++;

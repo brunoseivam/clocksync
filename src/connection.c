@@ -124,7 +124,7 @@ static const char* cmd_str(enum command cmd)
 
 void print_packet(struct packet *pkt)
 {
-	printf("command: %2X %s\n", pkt->type, cmd_str(pkt->type));
+	printf(" : %s ", cmd_str(pkt->type));
 /*	printf("packet: version: %2X\n", pkt->version);
 	printf("packet: seqnum: %d\n", pkt->seqnum);
 	printf("packet: time: %us %us\n", (unsigned int) pkt->time.tv_sec, (unsigned int) pkt->time.tv_usec);
@@ -217,7 +217,6 @@ int send_msg(const unsigned char dest_addr_ip[4], const struct packet *pkt)
 	struct addrinfo hints, *servinfo;
 	int rv, numbytes;
 	unsigned char buf[BUFLEN];
-	//uint32_t *timevalp;
 
 	char dest_addr[16];  // "xxx.xxx.xxx.xxx\0"
 
@@ -253,7 +252,8 @@ int send_msg(const unsigned char dest_addr_ip[4], const struct packet *pkt)
 			return -1;
 		}
 
-   printf("SENT: [%20s]   TO: [", cmd_str(pkt->type));
+	printf("---------------------\n");
+   printf("SENT: %20s   TO: [", cmd_str(pkt->type));
    printip(dest_addr_ip);
    printf("]\n");
 
@@ -279,8 +279,8 @@ int recv_msg(struct packet *pkt, struct timeval *tv)
       if(!FD_ISSET(sockfd, &readfds))
       {
          pkt->type = CMD_TIMEOUT;
-         pkt->ip[0] = pkt->ip[1] = pkt->ip[2] = pkt->ip[3] = 0;
-         /*pkt->ip[0] = pkt->ip[1] = pkt->ip[2] = pkt->ip[3] = 0*/;
+         pkt->ip[0] = 127;	pkt->ip[1] = 0;
+			pkt->ip[2] = 0; pkt->ip[3] = 1;
          break;
       }
       else
@@ -306,9 +306,10 @@ int recv_msg(struct packet *pkt, struct timeval *tv)
 	}
 	while(is_own_ip(pkt->ip));
 
-   printf("RECV: [%20s] FROM: [", cmd_str(pkt->type));
+   printf("RECV: %20s FROM: [", cmd_str(pkt->type));
    printip(pkt->ip);
    printf("]\n");
+	printf("---------------------\n");
 
 	return 0;
 }
