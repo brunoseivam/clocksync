@@ -11,6 +11,16 @@
 #include "adjtime.h"
 
 #define PORT "3700"
+#define TIME_SYNC 60
+/* Must be greater than TIME_SYNC */
+#define MIN_TIMEOUT (1.1*TIME_SYNC)
+#define MAX_TIMEOUT (2*TIME_SYNC)
+
+#define CANDIDATE_TIMEOUT 0.5*TIME_SYNC
+#define MASTER_TIMEOUT TIME_SYNC
+#define MASTER_ADJTIME_TIMEOUT 0.5*TIME_SYNC
+#define CANDIDATE_TIMEOUT 0.5*TIME_SYNC
+#define ACCEPT_TIMEOUT 0.5*TIME_SYNC
 
 enum state
 {
@@ -24,45 +34,39 @@ enum state
 
 const unsigned char BROADCAST[4] = {255,255,255,255};
 
-const struct timeval STARTUP_TIMEOUT =
+/*struct timeval STARTUP_TIMEOUT =
 {
 	.tv_sec = 5,
 	.tv_usec = 0
 };
 
-const struct timeval SLAVE_TIMEOUT =
+struct timeval SLAVE_TIMEOUT =
 {
 	.tv_sec = 5,
 	.tv_usec = 0
-};
+};*/
 
-const struct timeval SLAVE_ADJTIME_TIMEOUT =
+const struct timeval candidate_timeout =
 {
-	.tv_sec = 0,
-	.tv_usec = 100000
-};
-
-const struct timeval CANDIDATE_TIMEOUT =
-{
-	.tv_sec = 5,
+	.tv_sec = CANDIDATE_TIMEOUT,
 	.tv_usec = 0
 };
 
-const struct timeval MASTER_TIMEOUT =
+const struct timeval master_timeout =
 {
-	.tv_sec = 4,
+	.tv_sec = MASTER_TIMEOUT,
 	.tv_usec = 0
 };
 
-const struct timeval MASTER_ADJTIME_TIMEOUT =
+const struct timeval master_adjtime_timeout =
 {
-	.tv_sec = 0,
-	.tv_usec = 100000
+	.tv_sec = MASTER_ADJTIME_TIMEOUT,
+	.tv_usec = 0
 };
 
-const struct timeval ACCEPT_TIMEOUT =
+const struct timeval accept_timeout =
 {
-	.tv_sec = 5,
+	.tv_sec = ACCEPT_TIMEOUT,
 	.tv_usec = 0
 };
 
@@ -79,10 +83,17 @@ void print_time(struct timeval *time)
 	printf("%s.%06d\n", tm_buf, (unsigned int)time->tv_usec);
 }
 
-void set_timer(struct timeval* tval, struct timeval timeout)
+void set_timer(struct timeval* tval, const struct timeval *timeout)
 {
-	tval->tv_sec = timeout.tv_sec;
-	tval->tv_usec = timeout.tv_usec;
+	/* rand timer initializer */
+	if(timeout == NULL){
+		tval->tv_sec = (rand() % MAX_TIMEOUT) + MIN_TIMEOUT;
+		tval->tv_usec = (rand() % MAX_TIMEOUT);
+		return;
+	}
+
+	tval->tv_sec = timeout->tv_sec;
+	tval->tv_usec = timeout->tv_usec;
 }
 
 void build_send_packet(const unsigned char dest[4],
@@ -105,7 +116,7 @@ void build_send_packet(const unsigned char dest[4],
 }
 
 void change_state(enum state *current_state, enum state next_state,
-		            struct timeval *tval, struct timeval timeout)
+		            struct timeval *tval, const struct timeval *timeout)
 {
 	*current_state = next_state;
    set_timer(tval, timeout);
@@ -142,10 +153,11 @@ int main(int argc, char **argv)
 
 	/* Open a socket and start listening to a scpefied port */
 	open_udp_socket();
+	srand(time(NULL));
 
 	/* Startup: */
 	build_send_packet(BROADCAST, CMD_MASTERREQ, 0); /* Search for a master */
-	change_state(&state, STATE_STARTUP, &tval, STARTUP_TIMEOUT);
+	change_state(&state, STATE_STARTUP, &tval, NULL);
 
    for(;;)
    {
@@ -167,7 +179,7 @@ int main(int argc, char **argv)
 			/*    STARTUP    */
          case(STATE_STARTUP | CMD_TIMEOUT):
 				build_send_packet(BROADCAST, CMD_MASTERUP, 0);
-            change_state(&state, STATE_MASTER, &tval, MASTER_TIMEOUT);
+            change_state(&state, STATE_MASTER, &tval, &master_timeout);
             break;
 
 			case(STATE_STARTUP | CMD_MASTERUP):
@@ -176,7 +188,7 @@ int main(int argc, char **argv)
 			case(STATE_STARTUP | CMD_MASTERREQ):
 			case(STATE_STARTUP | CMD_MASTERACK):
 			case(STATE_STARTUP | CMD_ELECTION):
-				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
+				change_state(&state, STATE_SLAVE, &tval, NULL);
 				break;
 
 			/*    MASTER    */
@@ -189,7 +201,7 @@ int main(int argc, char **argv)
 				 * to send their clocks. After the MASTER_ADJTIME_TIMEOUT no more clock
 				 * packets will be accepted and the "slow" slaves, if any, won't
 				 * be synchronized*/
-				change_state(&state, STATE_MASTER_ADJTIME, &tval, MASTER_ADJTIME_TIMEOUT);
+				change_state(&state, STATE_MASTER_ADJTIME, &tval, &master_adjtime_timeout);
 				/* Possibly new thread? Non blocking function...*/
 				adjust_master_prepare();
 				break;
@@ -200,7 +212,7 @@ int main(int argc, char **argv)
 
 			case(STATE_MASTER | CMD_QUIT):
 				build_send_packet(pkt.ip, CMD_ACK, 0);
-				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
+				change_state(&state, STATE_SLAVE, &tval, NULL);
 				break;
 
 			case(STATE_MASTER | CMD_ELECTION):
@@ -217,7 +229,7 @@ int main(int argc, char **argv)
 			case(STATE_MASTER_ADJTIME | CMD_TIMEOUT):
 				/* Calculate avg clocks and send to each slave his correction */
 				/* Restart the synchronization timer */
-				change_state(&state, STATE_MASTER, &tval, MASTER_TIMEOUT);
+				change_state(&state, STATE_MASTER, &tval, &master_timeout);
 				adjust_master_calcandsend();
 				break;
 
@@ -226,12 +238,12 @@ int main(int argc, char **argv)
 				/* Send clock packet to master and change to an intermediate state
 				 * in order to wait for a synch packet */
 				build_send_packet(pkt.ip, CMD_CLOCKREQ_RESPONSE, 1);
-            change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
+            change_state(&state, STATE_SLAVE, &tval, NULL);
             break;
 
 			case(STATE_SLAVE | CMD_TIMEOUT):
 				build_send_packet(BROADCAST, CMD_ELECTION, 0);
-				change_state(&state, STATE_CANDIDATE, &tval, CANDIDATE_TIMEOUT);
+				change_state(&state, STATE_CANDIDATE, &tval, &candidate_timeout);
             break;
 
 			case(STATE_SLAVE | CMD_MASTERUP):
@@ -240,20 +252,20 @@ int main(int argc, char **argv)
 
 			case(STATE_SLAVE | CMD_ELECTION):
 				build_send_packet(pkt.ip, CMD_ACCEPT, 0);
-				change_state(&state, STATE_ACCEPT, &tval, ACCEPT_TIMEOUT);
+				change_state(&state, STATE_ACCEPT, &tval, &accept_timeout);
 				break;
 
 			case(STATE_SLAVE | CMD_CLOCKSYNC):
 				/* Receive packet from master, adjust local time and return to
 				 * your rightful state (slave of course... =])*/
 				adjust_slave_clock(&pkt.time);
-				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
+				change_state(&state, STATE_SLAVE, &tval, NULL);
 				break;
 
 			/*    CANDIDATE   */
 			case(STATE_CANDIDATE | CMD_TIMEOUT):
 				build_send_packet(BROADCAST, CMD_MASTERUP, 0);
-				change_state(&state, STATE_MASTER, &tval, MASTER_TIMEOUT);
+				change_state(&state, STATE_MASTER, &tval, &master_timeout);
 				break;
 
 			case(STATE_CANDIDATE | CMD_ELECTION):
@@ -270,12 +282,12 @@ int main(int argc, char **argv)
 				//no break
 
 			case(STATE_CANDIDATE | CMD_MASTERREQ):
-				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
+				change_state(&state, STATE_SLAVE, &tval, NULL);
 				break;
 
 			/*    ACCEPT    */
 			case(STATE_ACCEPT | CMD_TIMEOUT):
-				change_state(&state, STATE_SLAVE, &tval, SLAVE_TIMEOUT);
+				change_state(&state, STATE_SLAVE, &tval, NULL);
 				break;
 
 			case(STATE_ACCEPT | CMD_ELECTION):
